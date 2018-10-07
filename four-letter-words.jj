@@ -1,0 +1,83 @@
+options {
+    STATIC = false;
+}
+
+PARSER_BEGIN(FLW)
+    import java.io.Reader;
+    import java.io.StringReader;
+    import java.io.IOException;
+    import java.io.BufferedReader;
+
+    class FLW {
+        static String substitute(String inString) {
+            Reader reader = new StringReader(inString);
+            FLW parser = new FLW(reader);
+            StringBuffer buffer = new StringBuffer();
+            try {
+                parser.Start(buffer);
+            } catch (TokenMgrError e) {
+                throw new IllegalStateException();
+            } catch (ParseException e) {
+                throw new IllegalStateException();
+            }
+            return buffer.toString();
+        }
+
+        public static String readFile(String file) throws IOException {
+            BufferedReader reader = new BufferedReader(new java.io.FileReader(file));
+            String line = null;
+            StringBuilder stringBuilder = new StringBuilder();
+
+            try {
+                while ((line = reader.readLine()) != null) {
+                    stringBuilder.append(line);
+                    stringBuilder.append("\r\n");
+                }
+
+                return stringBuilder.toString();
+            } finally {
+                reader.close();
+            }
+        }
+
+        public static void main(String[] args) {
+            for (String arg: args)
+                System.out.println(arg);
+            if (args.length < 1) {
+                System.out.println("only "+args.length+" arguments");
+                return;
+            }
+            System.out.println("reading from file "+args[0]);
+            String filecontents = "";
+            try {
+                filecontents = readFile(args[0]);
+            } catch (IOException e) {
+                System.out.println("couldn't read file, exiting...");
+                return;
+            }
+            System.out.println("filecontents:\n"+filecontents);
+            System.out.println(substitute(filecontents));
+        }
+    }
+PARSER_END(FLW)
+
+TOKEN : { < FOUR_LETTER_WORD : (<LETTER>){4} > }
+TOKEN : { < FIVE_OR_MORE_LETTER_WORD : (<LETTER>){5} (<LETTER>)* > }
+TOKEN : { < #LETTER : ["a"-"z", "A"-"Z"] > }
+TOKEN : { < OTHER : ~[] > }
+
+void Start(StringBuffer buffer) : {
+    Token t;
+}
+{
+    (
+        <FOUR_LETTER_WORD> {
+            buffer.append("****");
+        }
+    |
+        ( t = <FIVE_OR_MORE_LETTER_WORD> | t=<OTHER> ) {
+            buffer.append(t.image);
+        }
+    )*
+    <EOF>
+}
